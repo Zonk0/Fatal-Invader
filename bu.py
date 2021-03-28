@@ -1,6 +1,8 @@
+from itertools import repeat
 import pygame 
 import random
 import math
+import sys
 from pygame import mixer
 from os import path
 
@@ -8,6 +10,7 @@ from os import path
 img_dir=path.join(path.dirname(__file__),'sprites')
 sound_dir=path.join(path.dirname(__file__),'sounds')
 exp_dir=path.join(path.dirname(__file__),'sprites/explos')
+
 
 WIDTH = 600
 HEIGHT = 1200
@@ -25,7 +28,7 @@ pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Bullet Hell")
 clock = pygame.time.Clock()
-
+BUFF_TIME=10000
 
 def draw_text(surf, text, size, x, y):
     font_name=pygame.font.match_font('8-BIT WONDER.ttf')
@@ -35,13 +38,21 @@ def draw_text(surf, text, size, x, y):
     text_rect.midtop=(x,y)
     surf.blit(text_surface, text_rect)
 
-#def draw_health(surf,x,y,health,img):
-    #for i in range(health):
-        #img_rect=img.get_rect()
-        #img_rect.x= x+30*i
-        #img_rect.y= y
-        #surf.blit(img, img_rect)
+def draw_health(surf,x,y,health,img):
+    for i in range(health):
+        img_rect=img.get_rect()
+        img_rect.x= x+40*i
+        img_rect.y= y
+        surf.blit(img, img_rect)
 
+def draw_bombs(surf,x,y,bomb,img):
+    for i in range(bomb):
+        img_rect=img.get_rect()
+        img_rect.x= x+40*i
+        img_rect.y= y
+        surf.blit(img, img_rect)
+    if player.bomb==player.max_bomb:
+        pass
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -50,16 +61,26 @@ class Player(pygame.sprite.Sprite):
         #self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
         self.rect.centerx = WIDTH / 2
-        self.rect.bottom = HEIGHT - 10
+        self.rect.bottom = HEIGHT - 100
         self.speedy = 0
         self.speedx = 0
         self.radius=25
         self.health=5
         self.shoot_delay=100
         self.last_shot=pygame.time.get_ticks()
-    
+        self.buff=1
+        self.buff_time=pygame.time.get_ticks()
+        self.shield=0
+        self.max_bomb=2
+        self.bomb=0 
 
     def update(self):
+        if self.buff>=2 and pygame.time.get_ticks()-self.buff_time>BUFF_TIME:
+            self.buff-=1
+            self.buff_time=pygame.time.get_ticks()
+        if self.buff>=3 and pygame.time.get_ticks()-self.buff_time>BUFF_TIME:
+            self.buff-=1
+            self.buff_time=pygame.time.get_ticks()
         self.speedx = 0
         self.speedy = 0
         keypress = pygame.key.get_pressed()
@@ -82,17 +103,42 @@ class Player(pygame.sprite.Sprite):
         if self.rect.bottom > HEIGHT:
             self.rect.bottom = HEIGHT
 
+    def gunbuff(self):
+        self.buff+=1
+        self.buff_time=pygame.time.get_ticks()
+
     def shoot(self):
         state=pygame.time.get_ticks()
-        if state- self.last_shot>self.shoot_delay:
+        if state-self.last_shot>self.shoot_delay:
             self.last_shot=state
-            bullet=Bullet(self.rect.centerx,self.rect.top)
-            all_sprites.add(bullet)
-            bullets.add(bullet)
-            player_shoot.play()
+            if self.buff==1:
+                bullet=Bullet(self.rect.centerx,self.rect.top)
+                all_sprites.add(bullet)
+                bullets.add(bullet)
+                player_shoot.play()
+            if self.buff==2:
+                bullet1=Bullet(self.rect.left,self.rect.centery)
+                bullet2=Bullet(self.rect.right,self.rect.centery)
+                all_sprites.add(bullet1)
+                all_sprites.add(bullet2)
+                bullets.add(bullet1)
+                bullets.add(bullet2)
+                player_shoot.play()
+            if self.buff>=3:
+                bullet1=Bullet(self.rect.left,self.rect.centery)
+                bullet2=Bullet(self.rect.right,self.rect.centery)
+                bullet3=Bullet(self.rect.centerx,self.rect.top)
+                all_sprites.add(bullet1)
+                all_sprites.add(bullet2)
+                all_sprites.add(bullet3)
+                bullets.add(bullet1)
+                bullets.add(bullet2)
+                bullets.add(bullet3)
+                player_shoot.play()
 
-    def bomb(self):
-        pass
+    def pbomb(self): #make it stop adding if limit is 5
+        if self.bomb>=5:
+            pass
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self,x,y):
@@ -108,6 +154,21 @@ class Bullet(pygame.sprite.Sprite):
     def update(self):
         self.rect.y+=self.speedy
         if self.rect.bottom<0:
+            self.kill()
+
+class Buff(pygame.sprite.Sprite):
+    def __init__(self,center):
+        pygame.sprite.Sprite.__init__(self)
+        self.type=random.choice(['shield','doublegun','bomb'])
+        self.image=buff_imgs[self.type]
+        #self.image.fill(YELLOW)
+        self.rect=self.image.get_rect()
+        self.rect.center= center
+        self.speedy=3
+
+    def update(self):
+        self.rect.y+=self.speedy
+        if self.rect.top>HEIGHT:
             self.kill()
 
 class Bomb(pygame.sprite.Sprite):
@@ -213,9 +274,43 @@ class Boss(pygame.sprite.Sprite):
         self.rect.y += self.speedy
         if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 20:
             self.rect.x = random.randrange(WIDTH - self.rect.width)
-            self.rect.y = (-250, -150)
+            self.rect.y = (-250, -150) #bug (invalid rect assigment)
             self.speedy = random.randrange(1, 2)
 
+################################################################################################
+
+class Explosion(pygame.sprite.Sprite): 
+    def __init__(self,center,size):
+        pygame.sprite.Sprite.__init__(self)
+        self.size = size
+        self.image = explosion_anim[self.size][0]
+        self.rect = self.image.get_rect()
+        self.rect.center = center
+        self.frame = 0
+        self.last_update = pygame.time.get_ticks()
+        self.frame_rate = 25 
+    def update(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_update > self.frame_rate: 
+            self.last_update = now
+            self.frame += 1
+            if self.frame == len(explosion_anim[self.size]):
+                self.kill()
+            else:
+                center = self.rect.center
+                self.image = explosion_anim[self.size][self.frame]
+                self.rect = self.image.get_rect()
+                self.rect.center = center 
+
+
+explosion_anim = {}
+explosion_anim['lg'] = []
+for i in range(15): 
+    filename = 'e{}.png'.format(i)
+    img = pygame.image.load(path.join(exp_dir,filename)).convert_alpha()
+    img_lg=pygame.transform.scale(img, (100,100))
+    explosion_anim['lg'].append(img_lg)
+    
 
 #load music
 #mysound = pygame.mixer.Sound("mysound.wav")
@@ -238,9 +333,20 @@ bigmob_kill.set_volume(0.2)
 
 
 #load game img
+bg_img=pygame.image.load(path.join(img_dir, 'bg_1.png')) #EDUARDO JOAO
+bg_img_rect=bg_img.get_rect()
+
+buff_imgs= {}
+buff_imgs['shield']=pygame.image.load(path.join(img_dir, 'shield.png')).convert_alpha()
+buff_imgs['doublegun']=pygame.image.load(path.join(img_dir, 'power1.png')).convert_alpha()
+buff_imgs['bomb']=pygame.image.load(path.join(img_dir, 'bomb1.png')).convert_alpha()
+bigshield_img=pygame.image.load(path.join(img_dir,'shield1.png')).convert_alpha()
+
 player_img=pygame.image.load(path.join(img_dir, 'p1.png')).convert_alpha ()
 player_health=pygame.image.load(path.join(img_dir, 'player_health.png')).convert_alpha()
 p_h=pygame.transform.scale(player_health, (50,50))
+player_bomb=pygame.image.load(path.join(img_dir, 'bomb1.png')).convert_alpha()
+p_b=pygame.transform.scale(player_bomb, (30,30))
 
 bullet_img=pygame.image.load(path.join(img_dir, 'b1.png')).convert_alpha ()
 mobbullet_img=pygame.image.load(path.join(img_dir, 'bm1.png')).convert_alpha ()
@@ -252,6 +358,7 @@ boss_img=pygame.image.load(path.join(img_dir, 'boss.png')).convert_alpha ()
 
 
 ######################################################################################
+
 all_sprites = pygame.sprite.Group()
 bullets=pygame.sprite.Group()
 mob_bullets=pygame.sprite.Group()
@@ -260,6 +367,7 @@ mobs = pygame.sprite.Group()
 bigmobs=pygame.sprite.Group()
 boss=pygame.sprite.Group()
 player = Player()
+buffs=pygame.sprite.Group()
 all_sprites.add(player)
 
 for i in range(8):
@@ -274,10 +382,6 @@ for i in range (1):
     b=Boss()
     all_sprites.add(b)
     boss.add(b)
-
-pygame.mixer.music.play(-1)
-
-score=0
 
 def mob_respawn():
     mob_kill.play()
@@ -297,9 +401,24 @@ def boss_respawn():
     all_sprites.add(b)
     boss.add(b)
 
+score=0
+
+#shakes the screen
+offset=repeat((0,0))
+def shake():
+    s = -1
+    for _ in range(0, 3):
+        for x in range(0, 20, 5):
+            yield (x*s, 0)
+        for x in range(20, 0, 5):
+            yield (x*s, 0)
+        s *= -1
+    while True:
+        yield (0, 0)
 
 # Game loop
 running = True
+pygame.mixer.music.play(-1)
 while running:
     # keep loop running at the right speed
     clock.tick(FPS)
@@ -315,45 +434,78 @@ while running:
             mob.shoot()                                                    #improved circular collision
     mob_bullet_hits=pygame.sprite.spritecollide(player,mob_bullets, True, pygame.sprite.collide_circle)
     for mob_bullet_hit in mob_bullet_hits:
+        offset=shake()
+        expl=Explosion(mob_bullet_hit.rect.center, 'lg') #animation
+        all_sprites.add(expl)
         player.health-=1
         if player.health<=0:
             running=False
     #bullet frequency
     for bigmob in bigmobs:
-        adj_odds=int(50*1/10)
+        adj_odds=int(100*1/5)
         if random.randrange(adj_odds)==0:
             bigmob.shoot()       
     bigmob_bullet_hits=pygame.sprite.spritecollide(player,bigmob_bullets, True,pygame.sprite.collide_circle)
     for bigmob_bullet_hit in bigmob_bullet_hits:
+        offset=shake()
+        expl=Explosion(bigmob_bullet_hit.rect.center, 'lg') #animation
+        all_sprites.add(expl)
         player.health-=1
         if player.health<=0:
             running=False
-    
 
     # Update
     all_sprites.update()
+
+    #check if player hit a buff and apply it
+    buffhits=pygame.sprite.spritecollide(player, buffs, True)
+    for buffhit in buffhits:
+        if buffhit.type=='shield':
+            player.shield+=4
+        if buffhit.type=='doublegun':
+            player.gunbuff()
+        if buffhit.type=='bomb':
+            player.bomb+=1
+            if player.bomb==5:
+                player.bomb==player.max_bomb
+
     #check if mob collided with bullet
     mobhits=pygame.sprite.groupcollide(mobs, bullets, True, True)
     for mobhit in mobhits:
+        expl=Explosion(mobhit.rect.center, 'lg') #animation
+        all_sprites.add(expl)
         score+=100
         mob_respawn()
     bigmobhits=pygame.sprite.groupcollide(bigmobs, bullets, True, True)
     for bigmobhit in bigmobhits:
-        score+=750
-        bigmob_respawn()
+        #bigmob.health-=1
+        expl=Explosion(bigmobhit.rect.center, 'lg') #animation
+        all_sprites.add(expl)
+        if bigmob.health>=0:
+            score+=750
+            if random.random()>0.85:
+                buff=Buff(bigmobhit.rect.center)
+                all_sprites.add(buff)
+                buffs.add(buff)
+            bigmob_respawn()
     bosshits=pygame.sprite.groupcollide(boss, bullets, True, True)
     for bosshit in bosshits:
         score+=1500 
-        boss_respawn()
-    
+        boss_respawn()    
     #check for collisions
     mobhits=pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
     for mobhit in mobhits:
+        expl=Explosion(mobhit.rect.center, 'lg') #animation
+        all_sprites.add(expl)
+        offset=shake()
         player.health-=1
         if player.health<=0:
             running=False
     bigmobhits=pygame.sprite.spritecollide(player, bigmobs, True, pygame.sprite.collide_circle)
     for bigmobhit in bigmobhits:
+        expl=Explosion(bigmobhit.rect.center, 'lg') #animation
+        all_sprites.add(expl)
+        offset=shake()
         player.health-=1
         if player.health<=0:
             running=False
@@ -365,11 +517,14 @@ while running:
 
     # Draw / render
     screen.fill(BLACK)
+    screen.blit(bg_img, next(offset))
     all_sprites.draw(screen)
     # *after* drawing everything, flip the display
-    #draw_health(screen, WIDTH-250, 1150, player_health, p_h)
+    draw_health(screen, WIDTH-250, 1150, player.health, p_h)
+    draw_bombs(screen, WIDTH-550, 1150, player.bomb, p_b)
     draw_text(screen, str(score), 50, WIDTH/2,50)
-    pygame.display.flip()
+    screen.blit(screen, next(offset))
+    pygame.display.flip() 
 
 pygame.quit()
     
