@@ -14,7 +14,7 @@ sound_dir=path.join(path.dirname(__file__),'sounds')
 exp_dir=path.join(path.dirname(__file__),'sprites/explos')
 
 WIDTH = 600
-HEIGHT = 1200
+HEIGHT = 1000
 FPS = 60 
  
 WHITE = (255, 255, 255)
@@ -561,11 +561,18 @@ level=0
 score=0
 pygame.mixer.music.play(-1) #2 different musics maybe?
 while running:
-
+    global maxmob
+    
     lvl_up=1500*level
     if score >=lvl_up*level:
         level+=1
         print (level)
+
+    maxmob=1
+    if level %1==0 and level<8:
+        maxmob+=1
+    else:
+        maxmob=8
 
     if in_menu:
         menu()
@@ -589,15 +596,11 @@ while running:
             all_sprites.add(alert)
             alert_count=1
 
-        maxmob=1
-        for x in range (maxmob):
+        
+        for i in range (maxmob):
             m = Mob()
             all_sprites.add(m)
-            mobs.add(m)
-        if level %1==0 and level<8:
-            maxmob+=1
-        else:
-            maxmob=8
+            mobs.add(m)           
             
     
         #for i in range(level):
@@ -794,8 +797,8 @@ while running:
     screen.blit(bg_img, next(offset))
     all_sprites.draw(screen)
     # *after* drawing everything, flip the display
-    draw_health(screen, WIDTH-250, 1150, player.health, p_h)
-    draw_bombs(screen, WIDTH-550, 1150, player.bombs, p_b)
+    draw_health(screen, WIDTH-250, 950, player.health, p_h)
+    draw_bombs(screen, WIDTH-550, 950, player.bombs, p_b)
     draw_text(screen, str(score), 30, WIDTH/2,50)
     draw_text(screen, 'Level '+str(level), 15, WIDTH/2,100)
     screen.blit(screen, next(offset))
