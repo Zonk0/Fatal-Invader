@@ -247,11 +247,11 @@ class Mob(pygame.sprite.Sprite):
         #self.image.fill(RED)
         self.rect = self.image.get_rect()
         self.rect.x = random.randrange(WIDTH - self.rect.width)
-        self.rect.y = random.randrange(-500, -40)
-        self.speedy = random.randrange(5, 10)
-        self.speedx = random.randrange(5, 10)
+        self.rect.y = random.randrange(-800, 0)
+        self.speedy = 10
+        self.speedx = 5 #self.rect.x * math.cos(self.speedy%5)
         self.radius=20
-        self.health=3 
+        self.health=2 
 
     def shoot(self):
         mob_bullet=MobBullet(self.rect.centerx,self.rect.bottom)
@@ -567,7 +567,6 @@ gameover=False
 running = True
 level=0
 score=0
-maxmob=2
 pygame.mixer.music.play(-1) #2 different musics maybe?
 while running:
     
@@ -575,8 +574,9 @@ while running:
     if score >=lvl_up*level:
         level+=1
         print (level)
+    maxmob=level
 
-    if level %1==0 and level<8:
+    if level<8:
         maxmob+=1
     else:
         maxmob=8
@@ -800,23 +800,24 @@ while running:
         gameover=True
         in_menu=False
     # Draw / render
-    y1+=5
-    y+=5
-    all_sprites.draw(screen)
-    pygame.display.flip()
-    # screen.fill(BLACK)
-    #screen.blit(bg_img, next(offset))
+    
+    y1+=3
+    y+=3
     screen.blit(bg_img,(x,y))
     screen.blit(bg_img,(x1,y1))
+    all_sprites.draw(screen)
+    draw_health(screen, WIDTH-250, 950, player.health, p_h)
+    draw_bombs(screen, WIDTH-550, 950, player.bombs, p_b)
+    draw_text(screen, str(score), 30, WIDTH/2,50)
+    draw_text(screen, 'Level '+str(level), 15, WIDTH/2,100)
+    pygame.display.update()
+    # screen.fill(BLACK)
+    #screen.blit(bg_img, next(offset))    
     if y > h:
         y = -h
     if y1 > h:
         y1 = -h
     # *after* drawing everything, flip the display
-    draw_health(screen, WIDTH-250, 950, player.health, p_h)
-    draw_bombs(screen, WIDTH-550, 950, player.bombs, p_b)
-    draw_text(screen, str(score), 30, WIDTH/2,50)
-    draw_text(screen, 'Level '+str(level), 15, WIDTH/2,100)
     screen.blit(screen, next(offset))
     pygame.display.flip() 
 
