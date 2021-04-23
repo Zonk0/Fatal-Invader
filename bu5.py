@@ -574,6 +574,10 @@ while running:
     if score >=lvl_up*level:
         level+=1
         print (level)
+    for i in range (level//10):
+        y1+=2
+        y+=2
+        
     maxmob=level
 
     if level<8:
@@ -803,6 +807,7 @@ while running:
     
     y1+=3
     y+=3
+    
     screen.blit(bg_img,(x,y))
     screen.blit(bg_img,(x1,y1))
     all_sprites.draw(screen)
