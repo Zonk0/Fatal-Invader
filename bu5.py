@@ -3,15 +3,18 @@ import pygame
 import random
 import math
 import sys
+import pickle
+import csv
 from pygame import mixer
 from os import path
 
-from pygame.constants import K_BACKSPACE, K_DOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_SPACE, MOUSEBUTTONDOWN
+from pygame.constants import K_BACKSPACE, K_DOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_SPACE, K_UP, MOUSEBUTTONDOWN
 
 
 img_dir=path.join(path.dirname(__file__),'sprites')
 sound_dir=path.join(path.dirname(__file__),'sounds')
 exp_dir=path.join(path.dirname(__file__),'sprites/explos')
+hi_dir=path.join(path.dirname(__file__))
 
 WIDTH = 600
 HEIGHT = 1000
@@ -25,6 +28,8 @@ BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 
 pygame.init()
+pygame.display.init()
+pygame.font.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Bullet Hell")
@@ -32,7 +37,8 @@ clock = pygame.time.Clock()
 BUFF_TIME=10000
 
 def draw_text(surf, text, size, x, y):
-    font_name='8-BIT WONDER.ttf'
+    pygame.font.init()
+    font_name='GamePlayed.ttf'
     font= pygame.font.Font(font_name, size)
     text_surface= font.render(text, False, WHITE) #True is for anti-aliased, False is for aliased
     text_rect= text_surface.get_rect()
@@ -248,8 +254,8 @@ class Mob(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = random.randrange(WIDTH - self.rect.width)
         self.rect.y = random.randrange(-800, 0)
-        self.speedy = 10
-        self.speedx = 5 #self.rect.x * math.cos(self.speedy%5)
+        self.speedy = 8
+        self.speedx = random.randrange(-5,5) #self.rect.x * math.cos(self.speedy%5)
         self.radius=20
         self.health=2 
 
@@ -265,7 +271,7 @@ class Mob(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 20:
             self.rect.x = random.randrange(WIDTH - self.rect.width)
             self.rect.y = random.randrange(-100, 90)
-            self.speedy = random.randrange(5, 10)
+            self.speedy = 8
 
 
 class MobBullet(pygame.sprite.Sprite):
@@ -276,7 +282,7 @@ class MobBullet(pygame.sprite.Sprite):
         self.rect=self.image.get_rect()
         self.rect.bottom=y
         self.rect.centerx=x
-        self.speedy= 10
+        self.speedy= 12
         self.radius=10
 
     def update(self):
@@ -292,7 +298,7 @@ class BigMob(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = random.randrange(WIDTH - self.rect.width)
         self.rect.y = random.randrange(-150, -100)
-        self.speedy = random.randrange(4, 5)
+        self.speedy = 4
         self.radius=45
         self.health=5
 
@@ -307,7 +313,7 @@ class BigMob(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 20:
             self.rect.x = random.randrange(WIDTH - self.rect.width)
             self.rect.y = random.randrange(-250, -150)
-            self.speedy = random.randrange(4, 5)
+            self.speedy = 4
 
 class BigMobBullet(pygame.sprite.Sprite):
     def __init__(self,x,y):
@@ -331,7 +337,7 @@ class Boss(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(boss_img, (350, 250))
         #self.image.fill(WHITE)
         self.rect = self.image.get_rect()
-        self.rect.x = random.randrange(WIDTH - self.rect.width)
+        self.rect.x = WIDTH/2 - self.rect.width
         self.rect.y = random.randrange(-250, -150)
         self.speedy = random.randrange(1, 2)
         self.health=50
@@ -352,7 +358,7 @@ class Boss(pygame.sprite.Sprite):
         self.rect.y += self.speedy
         if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 20:
             self.rect.x = random.randrange(WIDTH - self.rect.width)
-            self.rect.y = (-250, -150) #bug? (invalid rect assigment)
+            self.rect.y = random.randrange(-250, -150) #bug? (invalid rect assigment)
             self.speedy = random.randrange(1, 2)
 
 class BossBullet(pygame.sprite.Sprite):
@@ -427,20 +433,24 @@ for i in range(15):
     explosion_anim['lg'].append(img_lg)
     
     
+#score keeping
+
+file=open ('scores.txt')
 
 #load music
 #mysound = pygame.mixer.Sound("mysound.wav")
 #mysound.set_volume(0.5)
-pygame.mixer.music.load(path.join(sound_dir, 'Neon Dreams.mp3'))
-pygame.mixer.music.set_volume(0.1)
+
+neon=pygame.mixer.music.load(path.join(sound_dir, 'Hackers.mp3'))
+neon=pygame.mixer.music.set_volume(0.1)
+
 player_shoot=pygame.mixer.Sound(path.join(sound_dir, 'player shoot.wav'))
 player_shoot.set_volume(0.1)
 mob_shoot=pygame.mixer.Sound(path.join(sound_dir, 'mob shoot.wav'))
 mob_shoot.set_volume(0.2)
 bigmob_shoot=pygame.mixer.Sound(path.join(sound_dir, 'bigmob shoot.wav'))
 bigmob_shoot.set_volume(0.2)
-boss_shoot=pygame.mixer.Sound(path.join(sound_dir, 'boss shoot.wav'))
-boss_shoot.set_volume(0.05)
+
 
 buff_snd=pygame.mixer.Sound(path.join(sound_dir, 'buff2.wav'))
 buff_snd.set_volume(0.1)
@@ -506,89 +516,96 @@ def shake():
         yield (0, 0)
 
 #get position of cursor?
-in_menu=False
 def menu():
-    cursor=draw_text(screen,'*', 20, WIDTH/3.2, HEIGHT/1.72)
-    draw_text(screen, 'Bullet Hell', 50, WIDTH/2, HEIGHT/3)
-    draw_text(screen, 'Begin', 40, WIDTH/2, HEIGHT/1.75)
-    draw_text(screen, 'Scores', 20, WIDTH/2, HEIGHT/1.45)
-    draw_text(screen, 'Credits', 20, WIDTH/2, HEIGHT/1.25)
-    pygame.display.flip()
-
-    wait=True
-    while wait:
+    menu=True
+    selected='Begin' 
+    screen.fill(BLACK)   
+    while menu:
         clock.tick(FPS)
+        draw_text(screen, 'Bullet Hell', 50, WIDTH/2, HEIGHT/4)
         for event in pygame.event.get():
             if event.type==pygame.KEYDOWN:
-                if event.key == K_DOWN:
-                    pass
+                if event.key == K_UP:
+                    selected='Begin'
                     pygame.display.update()
-                if event.key==K_SPACE:
-                    wait=False
+                elif event.key == K_DOWN:
+                    selected='Scores'
+                    pygame.display.update()
+                #elif event.key == K_DOWN:
+                    #selected='Credits'
+                    #pygame.display.update()
                 if event.key==K_ESCAPE:
                     pygame.quit()
             if event.type==pygame.QUIT:
                 pygame.quit()
 
-pygame.display.update()
-clock.tick(FPS)
+            if selected=='Begin':
+                draw_text(screen,'*', 30, WIDTH/3, HEIGHT/1.72)
+                if event.type==pygame.KEYDOWN:
+                    if event.key==K_SPACE:
+                                menu=False
+            else:
+                draw_text(screen,'*', 30, WIDTH/3, HEIGHT/1)
 
-def credits():
-    screen.fill(BLACK)
-    draw_text(screen, 'Credits', 80, WIDTH/2, HEIGHT/3)
-    pygame.display.flip()
-    for event in pygame.event.get():
-        if event.type==pygame.KEYDOWN:
-            if event.key==K_BACKSPACE:
-                return
-    pygame.display.update()
-    clock.tick(FPS)
+            if selected=='Scores':
+                draw_text(screen,'*', 30, WIDTH/3, HEIGHT/1.44) 
+                if event.type==pygame.KEYDOWN:
+                    if event.key==K_SPACE:
+                        scores()
+                        pygame.display.flip()            
+            else:
+                draw_text(screen,'*', 30, WIDTH/3, HEIGHT/1)
+            
+                
+        draw_text(screen, 'Begin', 40, WIDTH/2, HEIGHT/1.75)
+        draw_text(screen, 'Scores', 30, WIDTH/2, HEIGHT/1.45)
+        draw_text(screen, 'Made by Alicja Donakowska', 15, WIDTH/4.5, HEIGHT/1.05)
+        draw_text(screen, '[ESC to Exit]', 15, WIDTH/9, HEIGHT/35)
+        #draw_text(screen, 'Credits', 20, WIDTH/2, HEIGHT/1.25)
+        pygame.display.flip()
+        pygame.display.update()
+        clock.tick(FPS)
 
 def scores():
+    with open(file,'r') as f:
+        reader=csv.reader(f)
+        scores=sorted(reader, key=lambda row:row[1], reverse=True)
+        topscores=sorted(scores,reverse=True)
+        top3=topscores[:3]
+        #for line in f:
+            #his=prev_scores.append(str(line.strip().split()))
     screen.fill(BLACK)
-    draw_text(screen, 'Scoreboard', 80, WIDTH/2, HEIGHT/3)
+    draw_text(screen, 'Scoreboard', 40, WIDTH/2, HEIGHT/2.8)
+    draw_text(screen, 'Level:Score', 15, WIDTH/2, HEIGHT/2.2)
+    draw_text(screen, str(top3), 20, WIDTH/2, HEIGHT/2)
     pygame.display.flip()
     for event in pygame.event.get():
         if event.type==pygame.KEYDOWN:
             if event.key==K_LEFT:
                 menu()
 
-def game_over():
-    draw_text(screen, 'GAME OVER', 90, WIDTH/2, HEIGHT/2)
-    pygame.display.flip()
-    wait=True
-    while wait:
-        clock.tick(FPS)
 
 #Game loop
 #####################################################################################
+
 in_menu=True
-gameover=False
 running = True
-level=0
-score=0
-pygame.mixer.music.play(-1) #2 different musics maybe?
+
+#PL=random.choice(music)
+
+
+file='scores.csv'
+
+ #2 different musics maybe?
 while running:
-    
-    lvl_up=1500*level
-    if score >=lvl_up*level:
-        level+=1
-        print (level)
-    for i in range (level//10):
-        y1+=2
-        y+=2
-        
-    maxmob=level
-
-    if level<8:
-        maxmob+=1
-    else:
-        maxmob=8
-
     if in_menu:
         menu()
+        neon=pygame.mixer.music.play(-1)
         in_menu=False
-        gameover=False
+        level=1
+        score=0
+        maxmob=level
+        maxboss=level
         all_sprites = pygame.sprite.Group()
         bullets=pygame.sprite.Group()
         mob_bullets=pygame.sprite.Group()
@@ -600,37 +617,28 @@ while running:
         player = Player()
         buffs=pygame.sprite.Group()
         all_sprites.add(player)
-        
-        alert_count=0
-        if alert_count==0:
-            alert=Shout('alert', WIDTH/2,-10,10)
-            all_sprites.add(alert)
-            alert_count=1
 
+        for maxmob in range (level%1):
+            maxmob+=1 
         
         for i in range (maxmob):
             m = Mob()
             all_sprites.add(m)
             mobs.add(m)           
-            
-    
-        #for i in range(level):
-            #m = Mob()
-            #all_sprites.add(m)
-            #mobs.add(m)
 
-        for i in range (4):
+        for i in range (maxmob):
             bm=BigMob()
             all_sprites.add(bm)
             bigmobs.add(bm)
-        #for i in range (1):
-            #b=Boss()
-            #all_sprites.add(b)
-            #bosses.add(b)
+
+        for i in range (1):
+            b=Boss()
+            all_sprites.add(b)
+            bosses.add(b)
+            
 
         def mob_respawn():
             mob_kill.play()
-            print ('score=', score)
             m=Mob()
             all_sprites.add(m)
             mobs.add(m)
@@ -646,15 +654,36 @@ while running:
             b=Boss()
             all_sprites.add(b)
             bosses.add(b)
+    
+    lvl_up=1500*level
+    if score >=lvl_up*level:
+        level+=1
+        with open(file,'a', newline='') as f:
+            writer=csv.writer(f)
+            writer.writerow([level,score])
+    for i in range (level//10):
+        y1+=2
+        y+=2
         
+    
+    if maxmob==maxboss:
+        maxmob-=4
+    if level<8:
+        maxmob+=2
+    elif level//10:
+        maxmob=2
 
     # keep loop running at the right speed
     clock.tick(FPS)
     # Process input (events)
     for event in pygame.event.get():
+        
         # check for closing window
         if event.type == pygame.QUIT:
             running = False
+
+
+
     #make mobs shoot + player and bullets collide
     for mob in mobs:
         adj_odds=int(250*2/10)
@@ -668,7 +697,7 @@ while running:
         all_sprites.add(expl)
         player.health-=1
         if player.health<=0:
-            running=False
+            in_menu=True
         player.buff-=1
         if player.buff<=1:
             player.buff=1
@@ -686,7 +715,7 @@ while running:
         all_sprites.add(expl)
         player.health-=1
         if player.health<=0:
-            running=False  
+            in_menu=True 
         player.buff-=1
         if player.buff<=1:
             player.buff=1
@@ -705,7 +734,7 @@ while running:
         all_sprites.add(expl)
         player.health-=1
         if player.health<=0:
-            running=False  
+            in_menu=True
         player.buff-=1
         if player.buff<=1:
             player.buff=1
@@ -775,7 +804,7 @@ while running:
         offset=shake()
         player.health-=1
         if player.health<=0:
-            running=False
+            in_menu=True
         player.buff-=1
         if player.buff<=1:
             player.buff=1
@@ -789,7 +818,7 @@ while running:
         offset=shake()
         player.health-=1
         if player.health<=0:
-            running=False
+            in_menu=True
         player.buff-=1
         if player.buff<=1:
             player.buff=1
@@ -797,13 +826,18 @@ while running:
             player.buff=4
         bigmob_respawn()
     bosshits=pygame.sprite.spritecollide(player, bosses, False)
-    if bosshits:
-        running=False
-    #coolide mobs and kill if they get too close to each other
+    
+    #if player.health==1:
+        #alert_count=0
+        #if alert_count==0:
+            #alert=Shout('alert', WIDTH/2,-10,10)
+            #all_sprites.add(alert)
+            #alert_count=1
+
     if player.health<=0:
-        gameover=True
-        in_menu=False
-    # Draw / render
+        in_menu=True    
+        
+    # Draw / rende
     
     y1+=3
     y+=3
@@ -825,6 +859,8 @@ while running:
     # *after* drawing everything, flip the display
     screen.blit(screen, next(offset))
     pygame.display.flip() 
+    
 
+    
 pygame.quit()
     
