@@ -82,7 +82,6 @@ class Player(pygame.sprite.Sprite):
         self.last_shot=pygame.time.get_ticks()
         self.buff=1
         self.buff_time=pygame.time.get_ticks()
-        self.shield=0
         self.bombs=0
 
         self.bombing=False 
@@ -105,6 +104,10 @@ class Player(pygame.sprite.Sprite):
             return
                     
         if self.rect.bottom > HEIGHT:
+            self.rect.bottom = HEIGHT
+            return
+        
+        if self.rect.bottom < 0:
             self.rect.bottom = HEIGHT
             return
             
@@ -312,7 +315,7 @@ class Boss(pygame.sprite.Sprite):
         self.rect.x = WIDTH/2 - self.rect.width
         self.rect.y = -350
         self.speedy = 0.5
-        self.health=250
+        self.health=500
         self.radius=90
         #self.shoot_delay = 10000 
         #self.last_shot = pygame.time.get_ticks() 
@@ -430,9 +433,9 @@ ms=pygame.mixer.music.play(-1)
 player_shoot=pygame.mixer.Sound(path.join(sound_dir, 'player shoot.wav'))
 player_shoot.set_volume(0.08)
 mob_shoot=pygame.mixer.Sound(path.join(sound_dir, 'mob shoot.wav'))
-mob_shoot.set_volume(0.2)
+mob_shoot.set_volume(0.1)
 bigmob_shoot=pygame.mixer.Sound(path.join(sound_dir, 'bigmob shoot.wav'))
-bigmob_shoot.set_volume(0.2)
+bigmob_shoot.set_volume(0.3)
 
 
 buff_snd=pygame.mixer.Sound(path.join(sound_dir, 'buff2.wav'))
