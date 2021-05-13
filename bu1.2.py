@@ -528,7 +528,7 @@ for imgs in mobbb_list:
 
 rainbow_bullet=[]
 rabb_list=['b1.png','b2.png','b3.png','b4.png','b5.png','b6.png','b7.png']
-for br in rainbow_bullet:
+for br in rabb_list:
     rainbow_bullet.append(pygame.image.load(path.join(img_dir,br)).convert_alpha())
 
 #mobbullet_img=pygame.image.load(path.join(img_dir, 'bm1.png')).convert_alpha ()
@@ -928,7 +928,7 @@ def game():
                    all_sprites.add(expl)
                    mobhit.kill()
                    score+=250
-                   if random.random()>0.5:
+                   if random.random()>0.95:
                        buff=Buff(mobhit.rect.center)
                        all_sprites.add(buff)
                        buffs.add(buff)
@@ -946,7 +946,7 @@ def game():
                     all_sprites.add(expl)
                     bigmobhit.kill()
                     score+=750
-                    if random.random()>0.5:
+                    if random.random()>0.95:
                         buff=Buff(bigmobhit.rect.center)
                         all_sprites.add(buff)
                         buffs.add(buff)
