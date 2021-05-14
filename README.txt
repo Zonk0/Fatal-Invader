@@ -12,17 +12,16 @@
 ##									    	##
 ##									    	##
 ##									    	##
-##	//SHOOTING//	    [SPACEBAR]	      //BOMBING//       [B]	    	##
-##										##
+##	//SHOOTING//   [SPACEBAR]   //BOMBING//   [B]   //FOCUS//   [F]		##
 ##										##
 ##										##
 ##								    		##
-##	//PAUSE//		[P]	      //EXIT//		[ESC]		##
-##										##
+##	//PAUSE//		[P]	      //EXIT//		[ESC]		##		##										##
 ##								            	##
 ##################################################################################
 
 	///	Game code, art and sprites by Alicja Donakowska	    ///
+    /// Player and boss projectiles/buffs by 'Wing Craft Master' creator///
 
 		///		Music credits:		///
 
