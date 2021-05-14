@@ -7,7 +7,7 @@ import os
 from pygame import mixer
 from os import path
 
-from pygame.constants import KEYDOWN, K_BACKSPACE, K_DOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_SPACE, K_UP, MOUSEBUTTONDOWN
+from pygame.constants import KEYDOWN, K_BACKSPACE, K_DOWN, K_ESCAPE, K_KP_ENTER, K_LEFT, K_RIGHT, K_SPACE, K_UP, MOUSEBUTTONDOWN,K_f
 
 
 img_dir=path.join(path.dirname(__file__),'sprites')
@@ -94,6 +94,10 @@ class Player(pygame.sprite.Sprite):
         keypress = pygame.key.get_pressed()
         if keypress[pygame.K_SPACE]:
             self.shoot()
+        
+        if keypress[pygame.K_f]:
+            clock.tick(25)
+            pygame.draw.circle(self.image,BBLUE,self.rect.center,self.radius)
 
         if self.rect.right > WIDTH:
             self.rect.right = WIDTH
@@ -435,9 +439,9 @@ ms=pygame.mixer.music.play(-1)
 player_shoot=pygame.mixer.Sound(path.join(sound_dir, 'player shoot.wav'))
 player_shoot.set_volume(0.05)
 mob_shoot=pygame.mixer.Sound(path.join(sound_dir, 'mob shoot.wav'))
-mob_shoot.set_volume(0.1)
+mob_shoot.set_volume(0.06)
 bigmob_shoot=pygame.mixer.Sound(path.join(sound_dir, 'bigmob shoot.wav'))
-bigmob_shoot.set_volume(0.3)
+bigmob_shoot.set_volume(0.2)
 
 
 buff_snd=pygame.mixer.Sound(path.join(sound_dir, 'buff2.wav'))
@@ -584,7 +588,7 @@ def menu():
                 elif event.key == K_DOWN:
                     selected='Scores'
                 
-                elif event.key==K_SPACE:
+                elif event.key==K_SPACE or K_KP_ENTER:
                     if selected=='Begin':
                         in_menu=False
                     elif selected=='Scores':
@@ -674,8 +678,8 @@ def pause():
 #Game loop
 #####################################################################################
 
-maxmobs = 4
-maxbigmobs = 4
+maxmobs = 8
+maxbigmobs = 5
 maxbosses = 1
 
 maxmob = 0
@@ -834,7 +838,8 @@ def game():
                 if event.type==pygame.KEYDOWN:
                     if event.key == pygame.K_p: # Pausing
                         pause()
-
+                    if event.key==pygame.K_f:
+                        clock.tick(25)
                     if event.key == pygame.K_b:
                         if player.bombing:
                             continue
@@ -862,6 +867,9 @@ def game():
                 if player.buff<=1:
                     player.buff=1
 
+                if player.buff>=4:
+                    player.buff=4
+
             #bullet frequency
             for bigmob in bigmobs:
               adj_odds=int(250*2/10)
@@ -883,6 +891,9 @@ def game():
                 if player.buff<=1: 
                     player.buff=1
 
+                if player.buff>=4:
+                    player.buff=4
+
 
             for boss in bosses:
                 for boss_bullets.angle in range(360):
@@ -903,6 +914,9 @@ def game():
                
                 if player.buff<=1:
                     player.buff=1
+                
+                if player.buff>=4:
+                    player.buff=4
             
             #check if player hit a buff and apply it
             buffhits=pygame.sprite.spritecollide(player, buffs, True)
@@ -911,7 +925,7 @@ def game():
                 if buffhit.type=='doublegun':
                     player.gunbuff()
                     if player.buff>=4:
-                        player.buff==4
+                        player.buff=4
                 if buffhit.type=='bomb':
                     player.bombs+=1
                     if player.bombs>=5:
@@ -975,7 +989,7 @@ def game():
                         all_sprites.add(buff)
                         buffs.add(buff)
                         if player.buff>=4:
-                            player.buff==4
+                            player.buff=4
                             
             #check for collisions
             mobhits=pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
@@ -990,7 +1004,7 @@ def game():
                 if player.buff<=1:
                     player.buff=1
                 if player.buff>=4:
-                    player.buff==4
+                    player.buff=4
                 
                 if len(mobs) == 0:
                         mob_respawn()
